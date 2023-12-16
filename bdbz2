@@ -1,16 +1,21 @@
 SQL Запросы
 1.	Запрос на полную выборку данных. 
 SELECT * FROM "Client"
+
 2.	Запрос на выборку данных без повторений. 
 SELECT DISTINCT "Password" FROM "Client"
+
 3.	Запрос на выборку первых 10 записей. 
 SELECT * FROM "Product" ORDER BY "Product_Code" LIMIT 10
+
 4. Запрос на выборку последних 15 записей.
 SELECT * FROM "Product" ORDER BY "Product_Code" DESC LIMIT 15
+
 5.	Запросы на выполнение функций Average, Max, Min
 SELECT AVG("Cost") AS average_value FROM "Order"
 SELECT MAX("Cost") AS max_value FROM "Order"
 SELECT MIN("Cost") AS min_value FROM "Order"
+
 6. Сконструируйте запросы с использованием оператора Where:
 - запрос на возвращение определенного кортежа по первичному ключу;
 SELECT * FROM "Order" WHERE "Order_Number" = 12
@@ -29,4 +34,48 @@ SELECT * FROM "Client" WHERE "Password" ='1234' OR "Password" ='123'
 SELECT * FROM "Client" WHERE "Address" NOT LIKE '%Сургут%'
 SELECT * FROM "Client" WHERE EXISTS (SELECT * FROM "Order" WHERE "DeliveryAddress" LIKE '%Калининград%')
 - запрос с использованием оператора NOT NULL в условии отбора.
+SELECT * FROM "Client" WHERE "Email" IS NOT NULL
+
+7.	Запрос с простыми условиями, условиями, содержащими IN или BETWEEN. 
+SELECT * FROM "Product" WHERE "Type" IN ('Куртки', 'Платья');
+
+8.	Запросы с сортировкой по нескольким полям, направлениям. 
+SELECT * FROM "Product" ORDER BY "QuantityStock" ASC
+
+9.	Запросы с использованием групповых операций (группировка статистические функции, отбор по групповым функциям). 
+SELECT "Type", AVG("QuantityStock") AS average 
+FROM "Product" 
+GROUP BY "Type";
+
+10.	Запросы с операцией над множествами (обязательно используя сортировку). 
+SELECT "DeliveryAddress"
+  FROM "Order"
+ UNION
+SELECT "Address"
+  FROM "Client"
+
+11.	Запросы на обновление. 
+UPDATE "Product"
+SET "Name"= 'Футболка Deadinside'
+WHERE "Name"= 'Футболка "Дединсайд"'
+
+12.	Запросы на удаление. 
+DELETE FROM "Client" 
+WHERE "Name" = 'Анастасия'
+
+13.	Запросы на вставку. 
+INSERT INTO "Product" ("Name", "Type","QuantityStock", "Photo", "ProductQuantity", "WeightGrams", "ClotherSize") 
+VALUES ('Футболка Крутая', 'Футболка', '1800', '', '1', '200', 'L');
+
+14.	Используя таблицу с персональными данными из своей БД или demo БД в PostgreSQL отобразите список сотрудников/персон (указав их Фамилию И. в одной колонке), которые в следующем месяце будут отмечать юбилей, с указанием возраста, даты рождения, даты юбилея. Заголовки должны соответствовать шаблону вывода данных.
+SELECT
+CONCAT("Surname", ' ', LEFT("Name", 1), '.') AS "FullName",
+DATE_PART('year', AGE(NOW(), "BirthDate")) AS "Age",
+"BirthDate" AS "BirthDate",
+"BirthDate" +INTERVAL '1 year' + INTERVAL '1 year' * DATE_PART('year', AGE(NOW(), "BirthDate")) AS "Anniversary"
+FROM
+"Client"
+WHERE
+EXTRACT(MONTH FROM "BirthDate") = EXTRACT(MONTH FROM NOW() + INTERVAL '1 month')
+AND DATE_PART('year', AGE(NOW(), "BirthDate"))::integer % 5 = 4
 
