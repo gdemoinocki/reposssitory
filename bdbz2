@@ -1,29 +1,7 @@
 SQL Запросы
-1)
+1.	Запрос на полную выборку данных. 
 SELECT * FROM "Client"
-2)
-
-3)
-
-4)
-
-5)
-
-6)
-
-7)
-
-8)
-
-9)
-
-10)
-
-11)
-
-12)
-
-13)
-
-14)
-
+2.	Запрос на выборку данных без повторений. 
+SELECT DISTINCT "Password" FROM "Client"
+3.	Запрос на выборку первых 10 записей. 
+SELECT * FROM "Product" ORDER BY "Product_Code" LIMIT 10
