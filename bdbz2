@@ -5,3 +5,28 @@ SELECT * FROM "Client"
 SELECT DISTINCT "Password" FROM "Client"
 3.	Запрос на выборку первых 10 записей. 
 SELECT * FROM "Product" ORDER BY "Product_Code" LIMIT 10
+4. Запрос на выборку последних 15 записей.
+SELECT * FROM "Product" ORDER BY "Product_Code" DESC LIMIT 15
+5.	Запросы на выполнение функций Average, Max, Min
+SELECT AVG("Cost") AS average_value FROM "Order"
+SELECT MAX("Cost") AS max_value FROM "Order"
+SELECT MIN("Cost") AS min_value FROM "Order"
+6. Сконструируйте запросы с использованием оператора Where:
+- запрос на возвращение определенного кортежа по первичному ключу;
+SELECT * FROM "Order" WHERE "Order_Number" = 12
+- запросы на возвращение значения по условиям больше, меньше и между;
+SELECT * FROM "Order" WHERE "Cost" > 9000
+SELECT * FROM "Order" WHERE "Cost" < 9000
+SELECT * FROM "Order" WHERE "Cost" BETWEEN 4000 AND 9000
+- запросы на возвращении всех кортежей по условию с использованием
+оператора LIKE и ESCAPE;
+SELECT * FROM public."Client" WHERE "Surname" LIKE 'А%!_' ESCAPE'!'
+SELECT * FROM public."Client" WHERE "Surname" LIKE 'А%_'
+- запрос на возвращение кортежей со сложным условием на основе
+логических операторов И, ИЛИ, НЕ, EXISTS;
+SELECT * FROM "Client" WHERE "Password" = '1234' AND "PhoneNumber" LIKE '%0%'
+SELECT * FROM "Client" WHERE "Password" ='1234' OR "Password" ='123'
+SELECT * FROM "Client" WHERE "Address" NOT LIKE '%Сургут%'
+SELECT * FROM "Client" WHERE EXISTS (SELECT * FROM "Order" WHERE "DeliveryAddress" LIKE '%Калининград%')
+- запрос с использованием оператора NOT NULL в условии отбора.
+
