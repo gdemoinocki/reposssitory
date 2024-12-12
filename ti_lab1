@@ -1,0 +1,466 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+
+namespace WindowsFormsApp1
+{
+    public partial class Form1 : Form
+    {
+        private DataTable dataTable;
+        private DataTable dataTableA;
+        private DataTable dataTableB;
+        public Form1()
+        {
+            InitializeComponent();
+            label3.Visible = false;
+            label4.Visible = false;
+            label5.Visible = false;
+            dataGridView1.Visible = false;
+            dataGridView2.Visible = false;
+            dataGridView3.Visible = false;
+            button2.Visible = false;
+            comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
+
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            double n;
+            double m;
+
+            if (double.TryParse(textBox1.Text, out m) & double.TryParse(textBox2.Text, out n))
+            {
+                if (n > 0 & m > 0)
+                {
+                  
+                    if (comboBox1.Text == "1" || comboBox1.Text == "2" || comboBox1.Text == "3")
+                    {
+                        comboBox1.Visible = false;
+                        dataGridView1.ReadOnly = false;// Разрешаем редактирование ячеек в DataGridView
+                        dataGridView1.AllowUserToAddRows = false;// Запрещаем добавлять строки в DataGridView
+                        //  Скрываем поля ввода i и j и кнопку создания таблиц
+                        textBox1.Visible = false;
+                        textBox2.Visible = false;
+                        label1.Visible = false;
+                        label2.Visible = false;
+                        button1.Visible = false;
+                        // Показываем таблицы и кнопку решения задачи 
+                        label3.Visible = true;
+                        label4.Visible = true;
+                        label5.Visible = true;
+                        dataGridView1.Visible = true;
+                        button2.Visible = true;
+                        dataTable = new DataTable();
+
+                        for (int i = 0; i < n; i++)
+                        {
+                            dataTable.Columns.Add($"{i + 1}", typeof(double));
+                        }
+
+                        dataGridView1.DataSource = dataTable;
+
+                        for (int i = 0; i < m; i++)
+                        {
+                            DataRow newRow = dataTable.NewRow();
+                            dataTable.Rows.Add(newRow);
+                        }
+
+                        if (comboBox1.Text == "1")// отображение элементов интерфейса для 1 способа
+                        {
+                            label3.Text = "p(bj / ai)";
+                            label5.Visible = false;
+                            dataGridView2.Visible = true;
+                            dataGridView2.ReadOnly = false;
+                            dataGridView2.AllowUserToAddRows = false;
+                            dataGridView2.Visible = true;
+                            dataTableA = new DataTable();
+                            for (int i = 0; i < m; i++)
+                            {
+                                dataTableA.Columns.Add($"{i + 1}", typeof(double));
+                            }
+
+                            dataGridView2.DataSource = dataTableA;
+                            DataRow newRowA = dataTableA.NewRow();
+                            dataTableA.Rows.Add(newRowA);
+                        }
+                        else if (comboBox1.Text == "2")
+                        {
+                            label3.Text = "p(ai / bj)";
+                            label4.Visible = false;
+                            dataGridView1.Visible = true;
+                            dataGridView3.ReadOnly = false;
+                            dataGridView3.AllowUserToAddRows = false;
+                            dataGridView3.Visible = true;
+
+                            dataTableB = new DataTable();
+                            for (int i = 0; i < n; i++)
+                            {
+                                dataTableB.Columns.Add($"{i + 1}", typeof(double));
+                            }
+                            dataGridView3.DataSource = dataTableB;
+                            DataRow newRowB = dataTableB.NewRow();
+                            dataTableB.Rows.Add(newRowB);
+                        }
+                        else
+                        {
+                            label3.Text = "p(ai, bj)";
+                            label4.Visible = false;
+                            label5.Visible = false;
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Выберите способ решения", "Ошибка");
+                    }
+                   
+                }
+                else
+                {
+                    MessageBox.Show("Введите положительное цело число", "Ошибка");
+                }
+            }
+            else
+            {
+                MessageBox.Show("Введите цело число", "Ошибка");
+            }
+        }
+
+        private void save_dg1()
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "CSV файлы (*.csv)|*.csv";
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                string filePath = saveFileDialog.FileName;
+                using (StreamWriter writer = new StreamWriter(filePath))
+                {
+                    // Записываем заголовки столбцов
+                    for (int i = 0; i < dataGridView1.Columns.Count; i++)
+                    {
+                        writer.Write(dataGridView1.Columns[i].HeaderText);
+                        if (i < dataGridView1.Columns.Count - 1)
+                        {
+                            writer.Write(",");
+                        }
+                    }
+                    writer.WriteLine();
+
+                    // Записываем данные из каждой строки
+                    for (int i = 0; i < dataGridView1.Rows.Count; i++)
+                    {
+                        for (int j = 0; j < dataGridView1.Columns.Count; j++)
+                        {
+                            writer.Write(dataGridView1.Rows[i].Cells[j].Value);
+                            if (j < dataGridView1.Columns.Count - 1)
+                            {
+                                writer.Write(",");
+                            }
+                        }
+                        writer.WriteLine();
+                    }
+                }
+            }
+        }
+
+        private void button2_Click(object sender, EventArgs e)
+        {
+            int n = dataGridView1.Rows.Count;
+            int m = dataGridView1.Columns.Count;
+            //save_dg1();
+            double[,] matrix1 = ReadMatrixFromDataGrid(dataGridView1, n, m);
+
+            string resultText = "Результат умножения матриц:\n";
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    resultText += matrix1[i, j].ToString() + " ";
+                }
+                resultText += "\n";
+            }
+            MessageBox.Show( resultText);
+
+
+
+           
+        }
+
+        private double[,] ReadMatrixFromDataGrid(DataGridView dataGridView, int n, int m)
+        {
+            double[,] matrix = new double[n, m];
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!string.IsNullOrEmpty(dataGridView.Rows[i].Cells[j].Value?.ToString()))
+                    {
+                        matrix[i, j] = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                        //MessageBox.Show(matrix[i, j].ToString(), "эл. матрицы ");
+                    }
+                    else
+                    {
+                        matrix[i, j] = 0;
+                    }
+                }
+            }
+            return matrix;
+        }
+
+        private double Calculate_H(DataGridView dataGridView, int n, int m)//метод для расчета энтропии
+        {
+            double[,] matrix = new double[n, m];
+            double h = 0;
+            double h_i = 0;
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!string.IsNullOrEmpty(dataGridView.Rows[i].Cells[j].Value?.ToString()))
+                    {
+                        matrix[i, j] = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                        h_i = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                        h_i = h_i * Math.Log(h_i, 2); 
+                        //MessageBox.Show(h_i.ToString(), "h_i");
+                        h += h_i;
+                        //MessageBox.Show(h.ToString(), "h");
+                    }
+                    else
+                    {
+                        matrix[i, j] = 0;
+                    }
+                }
+            }
+            return h;
+        }
+
+        private double Calculate_HAB(DataGridView dataGridView, int n, int m)//метод для расчета энтропии
+        {
+            double[,] matrix = new double[n, m];
+            double h = 0;
+            double h_i = 0;
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!string.IsNullOrEmpty(dataGridView.Rows[i].Cells[j].Value?.ToString()))
+                    {
+                        matrix[i, j] = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                        h_i = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                        h_i = h_i * Math.Log(h_i, 2);
+                        //MessageBox.Show(h_i.ToString(), "h_i");
+                        h += h_i;
+                        //MessageBox.Show(h.ToString(), "h");
+                    }
+                    else
+                    {
+                        matrix[i, j] = 0;
+                    }
+                }
+            }
+            return h;
+        }
+
+        private double[,] MultiplyMatrices(double[,] matrix1, double[,] matrix2, int n, int m)
+        {
+            //double[,] resultMatrix = new double[n, m];
+            //for (int i = 0; i < n; i++)
+            //{
+            //    for (int j = 0; j < m; j++)
+            //    {
+            //        for (int k = 0; k < matrix2.GetLength(0); k++)
+            //        {
+
+            //            resultMatrix[j, i] += matrix1[j, k] * matrix2[k, i];
+            //        }
+            //    }
+            //}
+            //return resultMatrix;
+
+            double[,] resultMatrix = new double[n, m];
+            //MessageBox.Show("m2 = " + m.ToString());
+            //MessageBox.Show("n2 = " + n.ToString());
+            for (int j = 0; j < n; j++)
+            {
+
+                for (int i = 0; i < m; i++)
+                {
+                    for (int k = 0; k < matrix2.GetLength(0); k++)
+                    {
+                        MessageBox.Show("j" + j.ToString()); 
+                        //MessageBox.Show("matrix2.GetLength(0) " + matrix2.GetLength(0).ToString());
+                        MessageBox.Show("i" + i.ToString());
+                        //MessageBox.Show("k" + k.ToString());
+
+                        //MessageBox.Show(n);
+                        //resultMatrix[j, i] += matrix1[j, k] * matrix2[k, i];
+                        
+                        MessageBox.Show("matrix1[" + j + "," + i + "]" + matrix1[j, i].ToString());
+                        MessageBox.Show("matrix2["+ k + "," + k +"]"+matrix2[k, k].ToString());
+                        resultMatrix[j, i] += matrix1[j, i] * matrix2[k, k];
+                        MessageBox.Show("resultMatrix = " + resultMatrix[j, i].ToString());
+
+                    }
+                    //MessageBox.Show("j" + j.ToString());
+                    //MessageBox.Show("i" + i.ToString());
+                    ////MessageBox.Show("k" + k.ToString());
+                    
+                    ////MessageBox.Show(n);
+                    ////resultMatrix[j, i] += matrix1[j, k] * matrix2[k, i];
+                    //resultMatrix[j, i] += matrix1[j, 0] * matrix2[0, i];
+                    //MessageBox.Show("resultMatrix = " + resultMatrix[j, i].ToString());
+                }
+            }
+            return resultMatrix;
+            //int rows1 = matrix1.GetLength(0);
+            //int cols1 = matrix1.GetLength(1);
+            //int rows2 = matrix2.GetLength(0);
+            //int cols2 = matrix2.GetLength(1);
+
+            //// Проверка на совместимость матриц для умножения
+            //if (cols1 != rows2)
+            //{
+            //    throw new ArgumentException("Количество столбцов первой матрицы должно быть равно количеству строк второй матрицы.");
+            //}
+
+            //double[,] resultMatrix = new double[rows1, cols2]; // Исправлено! Размерность resultMatrix
+
+            //for (int i = 0; i < rows1; i++)
+            //{
+            //    for (int j = 0; j < cols2; j++)
+            //    {
+            //        for (int k = 0; k < cols1; k++)
+            //        {
+            //            resultMatrix[i, j] += matrix1[i, k] * matrix2[k, j];
+            //        }
+            //    }
+            //}
+            //return resultMatrix;
+
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            label7.Text = "Результат";
+            listBox1.Items.Clear();
+            int n = dataGridView1.Rows.Count;
+            //MessageBox.Show("n0" + dataGridView1.Rows.Count.ToString());
+            int m = dataGridView1.Columns.Count;
+            double[,] resultMatrix;
+            double h_a;
+            double h_bdiva;
+            double[,] matrix1 = ReadMatrixFromDataGrid(dataGridView1, n, m);
+
+            if (comboBox1.Text == "1")
+            {
+                int n2 = dataGridView2.Rows.Count;
+                int m2 = dataGridView2.Columns.Count;
+                //MessageBox.Show("m2");
+                double[,] matrix2 = ReadMatrixFromDataGrid(dataGridView2, 1, n);
+                MessageBox.Show("res");
+                // Умножение матриц
+                //MessageBox.Show("n1" + n.ToString());
+                //MessageBox.Show("m1" + m.ToString());
+                resultMatrix = MultiplyMatrices(matrix1, matrix2, n, m);
+                string resultText = "Результат умножения матриц:\n";
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < m; j++)
+                    {
+                        resultText += resultMatrix[i, j].ToString() + " ";
+                    }
+                    resultText += "\n";
+                }
+                MessageBox.Show(resultText);
+
+                
+
+                //h_a = Calculate_H(dataGridView2, 1, m);
+                //MessageBox.Show("h_a=" + h_a);
+
+                //h_a = Math.Log(h_a, 2);
+                //MessageBox.Show("log h_a=" + h_a);
+
+                h_a =Calculate_H(dataGridView2, 1, m);// рассчитываем энтропию ансамбля А
+                MessageBox.Show("h_a=" + h_a);
+                listBox1.Items.Add("H(A) = "+h_a);
+
+                //h_bdiva=Calculate_H(dataGridView2, 2, m);
+
+                
+
+
+
+            }
+            else if (comboBox1.Text == "2")
+            {
+                int n3 = dataGridView3.Rows.Count;
+                int m3 = dataGridView3.Columns.Count;
+                //MessageBox.Show("m2");
+                double[,] matrix3 = ReadMatrixFromDataGrid(dataGridView3, 1, n);
+                MessageBox.Show("res");
+                // Умножение матриц
+               
+                resultMatrix = MultiplyMatrices(matrix1, matrix3, n, m);
+                string resultText = "Результат умножения матриц:\n";
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < m; j++)
+                    {
+                        resultText += resultMatrix[i, j].ToString() + " ";
+                    }
+                    resultText += "\n";
+                }
+                MessageBox.Show(resultText);
+            }
+            else
+            {
+                int n2 = dataGridView2.Rows.Count;
+                int m2 = dataGridView2.Columns.Count;
+                MessageBox.Show("m2");
+                double[,] matrix2 = ReadMatrixFromDataGrid(dataGridView2, 1, m);
+                MessageBox.Show("res");
+                // Умножение матриц
+                resultMatrix = MultiplyMatrices(matrix1, matrix2, n, m);
+                
+                string resultText = "Результат умножения матриц:\n";
+                for (int i = 0; i < n; i++)
+                {
+                    for (int j = 0; j < m; j++)
+                    {
+                        resultText += resultMatrix[i, j].ToString() + " ";
+                    }
+                    resultText += "\n";
+                }
+                MessageBox.Show(resultText);
+            }
+            
+           
+
+        }
+
+        private void label4_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label8_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void label7_Click(object sender, EventArgs e)
+        {
+
+        }
+    }
+}
