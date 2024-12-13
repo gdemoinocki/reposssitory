@@ -1,0 +1,442 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.IO;
+using System.Linq;
+using System.Reflection.Emit;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using System.Xml.Linq;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ToolTip;
+
+namespace WindowsFormsApp1
+{
+    public partial class Form1 : Form
+    {
+        private DataTable dataTable;
+        private DataTable dataTableA;
+        public Form1()
+        {
+            InitializeComponent();
+            label3.Visible = false;
+            label4.Visible = false;
+            dataGridView1.Visible = false;
+            dataGridView2.Visible = false;
+            comboBox1.DropDownStyle = ComboBoxStyle.DropDownList;
+
+        }
+        private void button1_Click(object sender, EventArgs e)
+        {
+            double n;
+            double m;
+
+            if (double.TryParse(textBox1.Text, out m) & double.TryParse(textBox2.Text, out n))
+            {
+                if (n > 0 & m > 0)
+                {
+                    if (comboBox1.Text == "1" || comboBox1.Text == "2" || comboBox1.Text == "3")
+                    {
+                        comboBox1.Visible = false;
+                        dataGridView1.ReadOnly = false;// Разрешаем редактирование ячеек в DataGridView
+                        dataGridView1.AllowUserToAddRows = false;// Запрещаем добавлять строки в DataGridView
+                        //  Скрываем поля ввода i и j и кнопку создания таблиц
+                        textBox1.Visible = false;
+                        textBox2.Visible = false;
+                        label6.Visible = false;
+                        label1.Visible = false;
+                        label2.Visible = false;
+                        button1.Visible = false;
+                        // Показываем таблицы и кнопку решения задачи 
+                        label3.Visible = true;
+                        label4.Visible = true;
+                        dataGridView1.Visible = true;
+                        dataTable = new DataTable();
+
+                        for (int i = 0; i < n; i++)
+                        {
+                            dataTable.Columns.Add($"{i + 1}", typeof(double));
+                        }
+
+                        dataGridView1.DataSource = dataTable;
+
+                        for (int i = 0; i < m; i++)
+                        {
+                            DataRow newRow = dataTable.NewRow();
+                            dataTable.Rows.Add(newRow);
+                        }
+
+                        if (comboBox1.Text == "1" || comboBox1.Text == "2")// отображение элементов интерфейса для 1 способа
+                        {
+                            dataGridView2.Visible = true;
+                            dataGridView2.ReadOnly = false;
+                            dataGridView2.AllowUserToAddRows = false;
+                            dataGridView2.Visible = true;
+                            dataTableA = new DataTable();
+                            label3.Text = "p(bj / ai)";
+                            if (comboBox1.Text == "1")
+                            {
+                                label4.Text = "A";
+                                for (int i = 0; i < m; i++)
+                                {
+                                    dataTableA.Columns.Add($"{i + 1}", typeof(double));
+                                }
+                            }
+                            else
+                            {
+                                label4.Text = "B";
+                                label3.Text = "p(ai / bj)";
+                                for (int i = 0; i < n; i++)
+                                {
+                                    dataTableA.Columns.Add($"{i + 1}", typeof(double));
+                                }
+                            }
+                            dataGridView2.DataSource = dataTableA;
+                            DataRow newRowA = dataTableA.NewRow();
+                            dataTableA.Rows.Add(newRowA);
+                        }
+                        else
+                        {
+                            label3.Text = "p(ai, bj)";
+                            label4.Visible = false;
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show("Выберите способ решения", "Ошибка");
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Введите положительное цело число", "Ошибка");
+                }
+            }
+            else
+            {
+                MessageBox.Show("Введите цело число", "Ошибка");
+            }
+        }
+
+        private double[,] ReadMatrixFromDataGrid(DataGridView dataGridView, int n, int m)
+        {
+            double[,] matrix = new double[n, m];
+            for (int i = 0; i < n; i++)
+            {
+                for (int j = 0; j < m; j++)
+                {
+                    if (!string.IsNullOrEmpty(dataGridView.Rows[i].Cells[j].Value?.ToString()))
+                    {
+                        matrix[i, j] = Convert.ToDouble(dataGridView.Rows[i].Cells[j].Value);
+                    }
+                    else
+                    {
+                        matrix[i, j] = 0;
+                    }
+                }
+            }
+            return matrix;
+        }
+        
+        private double[,] MultiplyMatrices(double[,] matrix1, string ensemble)//для поиска ансамбля из матрицы совместных вероятностей
+        {
+            int rows1 = matrix1.GetLength(0);
+            int cols1 = matrix1.GetLength(1);
+            double[,] resultMatrix;
+
+            if (ensemble == "A")//для поиска ансамбля A из матрицы совместных вероятностей 
+            {
+                resultMatrix = new double[1, rows1];
+                for (int i = 0; i < rows1; i++)  
+                {
+                    for  (int j = 0; j < cols1; j++)  
+                    {
+                        resultMatrix[0,i] += matrix1[i, j];
+                    }
+                }  
+            }
+
+            else if (ensemble == "B")//для поиска ансамбля В из матрицы совместных вероятностей 
+            {
+                resultMatrix = new double[1, cols1];
+                for (int j = 0; j < cols1; j++)
+                {
+                    for (int i = 0; i < rows1; i++) 
+                    {
+                        resultMatrix[0,j] += matrix1[i, j];
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Не выбран ансамбль, который необходимо найти");
+            }
+            return resultMatrix;
+        }
+        //получение матрицы совместных вероятностей p(ai,bj) 1 способ
+        private double[,] CalculateJointProbabilityMatrix(double[,] priorProbabilities, double[,] conditionalProbabilities)
+        {
+            int rows = conditionalProbabilities.GetLength(0);
+            int cols = conditionalProbabilities.GetLength(1);
+            int priorCols = priorProbabilities.GetLength(1);
+
+            double[,] jointProbabilities = new double[rows, cols];
+
+            if (cols==priorCols)
+            {
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        jointProbabilities[i, j] = priorProbabilities[0, j] * conditionalProbabilities[i, j];
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++) 
+                    {
+                        jointProbabilities[i, j] = priorProbabilities[0, i] * conditionalProbabilities[i, j];
+                    }
+                }
+            }
+            return jointProbabilities;
+
+        }
+        private double Calculate_H( double[,] matrix)//метод для расчета энтропии
+        {
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
+            double h = 0;
+            for (int i = 0; i < cols; i++)
+            {
+                for (int j = 0; j < rows; j++)
+                {
+                    h += Math.Round(matrix[j,i] * Math.Log(matrix[j, i], 2), 2);
+                }
+            }
+            return h;
+        }
+
+        private double CalculateConditionalEntropyHBA(double[,] priorProbabilities, double[,] conditionalProbabilities, string probability)//получение H(B/A) 
+        {
+            int rows = conditionalProbabilities.GetLength(0);
+            int cols = conditionalProbabilities.GetLength(1);
+            double h = 0;
+
+            if (probability == "H(B/A)")
+            {
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        h += Math.Round(priorProbabilities[0, i] * conditionalProbabilities[i, j] * Math.Log(conditionalProbabilities[i, j], 2), 2);
+                    }
+                }
+            }
+            else if (probability == "H(A/B)")
+            {
+                for (int i = 0; i < rows; i++)
+                {
+                    for (int j = 0; j < cols; j++)
+                    {
+                        h += Math.Round(priorProbabilities[0, j] * conditionalProbabilities[i, j] * Math.Log(conditionalProbabilities[i, j], 2), 2);
+                    }
+                }
+            }
+            else
+            {
+                throw new ArgumentException("Не выбрана энтропия, которую необходимо найти");
+            }
+            return h;
+        }
+
+        private double[,] CalculateConditionalProbabilityMatrix(double[,] priorProbabilities, double[,] conditionalProbabilities, string ensemble)//получение матрицы совместных вероятностей p(ai,bj) 
+        {
+            int rows = conditionalProbabilities.GetLength(0);//p(aibi)
+            int cols = conditionalProbabilities.GetLength(1);
+
+            double[,] jointProbabilities = new double[rows, cols];
+
+            if(ensemble == "B")
+            {
+                for (int j = 0; j < cols; j++) 
+                {
+                    for (int i = 0; i < rows; i++) 
+                    {
+                        jointProbabilities[i, j] = Math.Round((conditionalProbabilities[i, j] / priorProbabilities[0, j]), 2);
+                    }
+                }
+            }
+            else
+            {
+                for (int i = 0; i < rows; i++)  
+                {
+                    for (int j = 0; j < cols; j++)  
+                    {
+                        jointProbabilities[i, j] = Math.Round((conditionalProbabilities[i, j] / priorProbabilities[0, i]), 2);
+                    }
+                }
+            }
+            return jointProbabilities;
+        }
+
+        private void button3_Click(object sender, EventArgs e)
+        {
+            label7.Text = "Результат";
+            listBox1.Items.Clear();
+            int n = dataGridView1.Rows.Count;
+            int m = dataGridView1.Columns.Count;
+            double[,] A;
+            double[,] B;
+            double[,] pij_matrix;
+            double[,] p_ai_div_bj;
+            double[,] p_bj_div_ai;
+            double h_a;
+            double h_b;
+            double h_bdiva;
+            double h_adivb;
+            double h_ab;
+            double i_ab;
+            double[,] matrix1 = ReadMatrixFromDataGrid(dataGridView1, n, m);
+
+            if (comboBox1.Text == "1")//1 способ
+            {
+                double[,] matrix2 = ReadMatrixFromDataGrid(dataGridView2, 1, n);
+
+                h_a = -Calculate_H(matrix2);// рассчитываем энтропию ансамбля А
+                listBox1.Items.Add("H(A) = " + h_a);
+
+                pij_matrix = CalculateJointProbabilityMatrix(matrix2, matrix1);//p(ai,bj)
+                listBox1.Items.Add("p(ai,bj) = ");
+                DisplayMatrixInListBox(pij_matrix, listBox1, "");
+
+                B = MultiplyMatrices(pij_matrix, "B");//находим ансамбль В
+                DisplayMatrixInListBox(B, listBox1, "B = ");
+
+                h_b = -Calculate_H(B);// рассчитываем энтропию ансамбля B
+                listBox1.Items.Add("H(B) = " + h_b);
+
+                h_bdiva = - CalculateConditionalEntropyHBA(matrix2, matrix1, "H(B/A)");// рассчитываем H(B/A)
+                listBox1.Items.Add("H(B/A) = " + h_bdiva);
+
+                p_ai_div_bj = CalculateConditionalProbabilityMatrix(B, pij_matrix, "B");//p(ai/bj)
+                listBox1.Items.Add("p(ai/bj) = ");
+                DisplayMatrixInListBox(p_ai_div_bj, listBox1, "");
+
+                h_adivb = - CalculateConditionalEntropyHBA(B, p_ai_div_bj, "H(A/B)");// рассчитываем H(A/B)
+                listBox1.Items.Add("H(A/B) = " + h_adivb);
+
+                h_ab = h_a + h_bdiva;//H(AB)
+                listBox1.Items.Add("H(AB) = " + h_ab);
+
+                i_ab = h_a - h_adivb;//Количество информации I(AB)
+                listBox1.Items.Add("I(AB) = " + i_ab);
+            }
+            else if (comboBox1.Text == "2")//2 способ
+            {
+                double[,] matrix2 = ReadMatrixFromDataGrid(dataGridView2, 1, m);
+
+                h_b = -Calculate_H( matrix2);// рассчитываем энтропию ансамбля B
+                listBox1.Items.Add("H(B) = " + h_b);
+
+                pij_matrix = CalculateJointProbabilityMatrix(matrix2, matrix1);//p(ai,bj)
+                listBox1.Items.Add("p(ai,bj) = ");
+                DisplayMatrixInListBox(pij_matrix, listBox1, "");
+
+                A = MultiplyMatrices(pij_matrix, "A");
+                DisplayMatrixInListBox(A, listBox1, "A = ");
+
+                h_a = -Calculate_H(A);// рассчитываем энтропию ансамбля A
+                listBox1.Items.Add("H(A) = " + h_a);
+
+                h_adivb = -CalculateConditionalEntropyHBA(matrix2, matrix1, "H(A/B)");// рассчитываем H(A/B)
+                listBox1.Items.Add("H(A/B) = " + h_adivb);
+
+                p_bj_div_ai = CalculateConditionalProbabilityMatrix(A, pij_matrix, "A");//p(ai/bj)
+                listBox1.Items.Add("p(bj/ai) = ");
+                DisplayMatrixInListBox(p_bj_div_ai, listBox1, "");
+
+                h_bdiva = -CalculateConditionalEntropyHBA(A, p_bj_div_ai, "H(B/A)");// рассчитываем H(B/A)
+                listBox1.Items.Add("H(B/A) = " + h_bdiva);
+
+                h_ab = h_a + h_bdiva;
+                listBox1.Items.Add("H(AB) = " + h_ab);//H(AB)
+
+                i_ab = h_a - h_adivb;//Количество информацииI(AB)
+                listBox1.Items.Add("I(AB) = " + i_ab);
+            }
+            else//3 способ
+            {
+                pij_matrix = matrix1;//p(ai,bj)
+
+                A = MultiplyMatrices(pij_matrix, "A");
+                DisplayMatrixInListBox(A, listBox1, "A = ");
+
+                B = MultiplyMatrices(pij_matrix, "B");//находим ансамбль В
+                DisplayMatrixInListBox(B, listBox1, "B = ");
+
+                h_a = -Calculate_H(A);// рассчитываем энтропию ансамбля B
+                listBox1.Items.Add("H(A) = " + h_a);
+
+                h_b = -Calculate_H(B);// рассчитываем энтропию ансамбля А
+                listBox1.Items.Add("H(B) = " + h_b);
+
+                p_ai_div_bj = CalculateConditionalProbabilityMatrix(B, pij_matrix, "B");//p(ai/bj)
+                listBox1.Items.Add("p(ai/bj) = ");
+                DisplayMatrixInListBox(p_ai_div_bj, listBox1, "");
+
+                p_bj_div_ai = CalculateConditionalProbabilityMatrix(A, pij_matrix, "A");//p(ai/bj)
+                listBox1.Items.Add("p(bj/ai) = ");
+                DisplayMatrixInListBox(p_bj_div_ai, listBox1, "");
+
+                h_adivb = -CalculateConditionalEntropyHBA(B, p_ai_div_bj, "H(A/B)");// рассчитываем H(A/B)
+                listBox1.Items.Add("H(A/B) = " + h_adivb);
+
+                h_bdiva = -CalculateConditionalEntropyHBA(A, p_bj_div_ai, "H(B/A)");// рассчитываем H(B/A)
+                listBox1.Items.Add("H(B/A) = " + h_bdiva);
+
+                h_ab = h_a + h_bdiva;
+                listBox1.Items.Add("H(AB) = " + h_ab);//H(AB)
+
+                i_ab = h_a - h_adivb;//Количество информацииI(AB)
+                listBox1.Items.Add("I(AB) = " + i_ab);
+            }
+
+        }
+        public static void DisplayMatrixInListBox(double[,] matrix, ListBox listBox, string title)//вывод матрицы 
+        {
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
+            for (int i = 0; i < rows; i++)
+            {
+                string rowString = "";
+                for (int j = 0; j < cols; j++)
+                {
+                    rowString += matrix[i, j].ToString("F2") + "\t"; 
+                }
+                listBox.Items.Add(title + rowString.TrimEnd('\t')); 
+            }
+        }
+        public static void FillDataGridView(DataGridView dataGridView, double[,] matrix)//заполнение таблицы В для расчета энтропии
+        {
+            dataGridView.Rows.Clear();
+            int rows = matrix.GetLength(0);
+            int cols = matrix.GetLength(1);
+            dataGridView.ColumnCount = cols; 
+            for (int i = 0; i < rows; i++)
+            {
+                dataGridView.Rows.Add(); 
+                for (int j = 0; j < cols; j++)
+                {
+                    dataGridView.Rows[i].Cells[j].Value = matrix[i, j];
+                }
+            }
+        }
+    }
+}
