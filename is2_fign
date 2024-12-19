@@ -1,0 +1,306 @@
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+
+namespace is_lab2
+{
+    public partial class MainForm : Form
+    {
+        private Maze _maze;
+        private const int CellSize = 20;
+        private CellType _currentDrawType = CellType.Empty;
+        private Dictionary<Point, List<Path>> _allPaths = new Dictionary<Point, List<Path>>();
+
+        public MainForm()
+        {
+            InitializeComponent();
+            InitializeMaze();
+        }
+
+        private void InitializeMaze()
+        {
+            _maze = new Maze(mazePictureBox.Width / CellSize, mazePictureBox.Height / CellSize, CellSize);
+            UpdateMazeView();
+        }
+
+        private void UpdateMazeView()
+        {
+            if (mazePictureBox.Image == null)
+            {
+                mazePictureBox.Image = new Bitmap(mazePictureBox.Width, mazePictureBox.Height);
+            }
+
+            using (var g = Graphics.FromImage(mazePictureBox.Image))
+            {
+                g.Clear(Color.White);
+                _maze.Draw(g);
+            }
+            mazePictureBox.Invalidate();
+        }
+
+        private void mazePictureBox_MouseClick(object sender, MouseEventArgs e)
+        {
+            int x = e.X / CellSize;
+            int y = e.Y / CellSize;
+
+            _maze.SetCellType(x, y, _currentDrawType);
+            UpdateMazeView();
+        }
+
+        private void saveButton_Click(object sender, EventArgs e)
+        {
+            SaveFileDialog saveFileDialog = new SaveFileDialog();
+            saveFileDialog.Filter = "Maze files (*.maze)|*.maze|All files (*.*)|*.*";
+            saveFileDialog.DefaultExt = "maze";
+            if (saveFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                _maze.SaveToFile(saveFileDialog.FileName);
+            }
+        }
+
+        private void loadButton_Click(object sender, EventArgs e)
+        {
+            OpenFileDialog openFileDialog = new OpenFileDialog();
+            openFileDialog.Filter = "Maze files (*.maze)|*.maze|All files (*.*)|*.*";
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                _maze = Maze.LoadFromFile(openFileDialog.FileName);
+                UpdateMazeView();
+                pathsListBox.Items.Clear();
+                _allPaths.Clear();
+                pathLengthLabel.Text = "";
+            }
+        }
+
+        private void findPathButton_Click(object sender, EventArgs e)
+        {
+            FindAllPaths();
+        }
+
+        private void clearButton_Click(object sender, EventArgs e)
+        {
+            _maze.ClearMaze();
+            UpdateMazeView();
+            pathsListBox.Items.Clear();
+            _allPaths.Clear();
+            pathLengthLabel.Text = "";
+        }
+
+        private void wallRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if (wallRadioButton.Checked)
+                _currentDrawType = CellType.Wall;
+        }
+
+        private void emptyRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if (emptyRadioButton.Checked)
+                _currentDrawType = CellType.Empty;
+        }
+
+        private void startRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if (startRadioButton.Checked)
+                _currentDrawType = CellType.Start;
+        }
+
+        private void exitRadioButton_CheckedChanged(object sender, EventArgs e)
+        {
+            if (exitRadioButton.Checked)
+                _currentDrawType = CellType.Exit;
+        }
+
+        private void FindAllPaths()
+        {
+            pathsListBox.Items.Clear();
+            allPathsListBox.Items.Clear();
+            _allPaths.Clear();
+
+            if (_maze.StartPosition == Point.Empty)
+            {
+                pathsListBox.Items.Add($"Нет входа");
+                allPathsListBox.Items.Add($"Нет входа");
+                return;
+            }
+
+            if (_maze.ExitPositions.Count == 0)
+            {
+                pathsListBox.Items.Add($"Нет выходов");
+                allPathsListBox.Items.Add($"Нет выходов");
+                return;
+            }
+
+            foreach (var exit in _maze.ExitPositions)
+            {
+                var allPaths = PathFinder.FindPaths(_maze, _maze.StartPosition, exit, 200);
+                var shortestPaths = PathFinder.FindPaths(_maze, _maze.StartPosition, exit, 100); // Оставляем нахождение коротких путей
+
+                if (allPaths.Count > 0)
+                {
+                    // Выбираем самый короткий путь
+                    var shortestPath = allPaths.OrderBy(p => p.Length).FirstOrDefault();
+
+                    if (shortestPath != null)
+                    {
+                        if (!_allPaths.ContainsKey(exit))
+                        {
+                            _allPaths.Add(exit, new List<Path> { shortestPath });
+                            allPathsListBox.Items.Add($"Пути к выходу ({exit.X}, {exit.Y})");
+                            allPathsListBox.Items.Add($"  Путь 1 (Длина: {shortestPath.Length})");
+                        }
+                        else
+                        {
+                            var existingPaths = _allPaths[exit];
+                            if (!existingPaths.Any(ep => ep.Steps.SequenceEqual(shortestPath.Steps)))
+                            {
+                                existingPaths.Add(shortestPath);
+                                allPathsListBox.Items.Add($"  Путь 1 (Длина: {shortestPath.Length})");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    allPathsListBox.Items.Add($"Нет путей к выходу ({exit.X}, {exit.Y})");
+                }
+
+                if (shortestPaths.Count > 0)
+                {
+                    pathsListBox.Items.Add($"Пути к выходу ({exit.X}, {exit.Y})");
+                    for (int i = 0; i < shortestPaths.Count; i++)
+                    {
+                        var path = shortestPaths[i];
+                        pathsListBox.Items.Add($"  Путь {i + 1} (Длина: {path.Length})");
+                    }
+                }
+                else
+                {
+                    pathsListBox.Items.Add($"Нет путей к выходу ({exit.X}, {exit.Y})");
+                }
+            }
+        }
+
+        private void pathsListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (pathsListBox.SelectedItem == null)
+                return;
+
+            string selectedText = pathsListBox.SelectedItem.ToString();
+
+            if (selectedText.StartsWith("Пути к выходу"))
+                return;
+
+            if (!selectedText.StartsWith("  Путь"))
+                return;
+
+            int selectedIndex = pathsListBox.SelectedIndex;
+            int exitIndex = 0;
+            for (int i = selectedIndex; i >= 0; i--)
+            {
+                if (pathsListBox.Items[i].ToString().StartsWith("Пути к выходу"))
+                {
+                    exitIndex = i;
+                    break;
+                }
+            }
+
+            Point exitPoint = Point.Empty;
+            var exitData = pathsListBox.Items[exitIndex].ToString().Replace("Пути к выходу (", "").Replace(")", "").Split(',');
+
+            if (exitData.Length == 2)
+                exitPoint = new Point(int.Parse(exitData[0]), int.Parse(exitData[1]));
+
+            string pathNumberString = selectedText.Replace("  Путь ", "").Replace(" (Длина:", "").Replace(")", "");
+            if (!int.TryParse(pathNumberString, out int pathNumber))
+                return;
+
+            if (_allPaths.TryGetValue(exitPoint, out var paths))
+            {
+                if (pathNumber > 0 && pathNumber <= paths.Count)
+                {
+                    var selectedPath = paths[pathNumber - 1];
+                    pathLengthLabel.Text = $"Длина пути: {selectedPath.Length}";
+                    DrawPath(selectedPath);
+                }
+            }
+        }
+
+        private void allPathsListBox_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (allPathsListBox.SelectedItem == null)
+                return;
+
+            string selectedText = allPathsListBox.SelectedItem.ToString();
+
+            if (selectedText.StartsWith("Пути к выходу"))
+                return;
+
+            if (!selectedText.StartsWith("  Путь"))
+                return;
+
+            int selectedIndex = allPathsListBox.SelectedIndex;
+            int exitIndex = 0;
+            for (int i = selectedIndex; i >= 0; i--)
+            {
+                if (allPathsListBox.Items[i].ToString().StartsWith("Пути к выходу"))
+                {
+                    exitIndex = i;
+                    break;
+                }
+            }
+
+            Point exitPoint = Point.Empty;
+            var exitData = allPathsListBox.Items[exitIndex].ToString().Replace("Пути к выходу (", "").Replace(")", "").Split(',');
+
+            if (exitData.Length == 2)
+                exitPoint = new Point(int.Parse(exitData[0]), int.Parse(exitData[1]));
+
+            string pathNumberString = selectedText.Replace("  Путь ", "").Replace(" (Длина:", "").Replace(")", "");
+            if (!int.TryParse(pathNumberString, out int pathNumber))
+                return;
+
+            if (_allPaths.TryGetValue(exitPoint, out var paths))
+            {
+                if (pathNumber > 0 && pathNumber <= paths.Count)
+                {
+                    var selectedPath = paths[pathNumber - 1];
+                    pathLengthLabel.Text = $"Длина пути: {selectedPath.Length}";
+                    DrawPath(selectedPath);
+                }
+            }
+        }
+
+        private void DrawPath(Path path)
+        {
+            if (mazePictureBox.Image == null)
+            {
+                mazePictureBox.Image = new Bitmap(mazePictureBox.Width, mazePictureBox.Height);
+            }
+
+            using (var g = Graphics.FromImage(mazePictureBox.Image))
+            {
+                g.Clear(Color.White);
+                _maze.Draw(g);
+
+                using (var pathBrush = new SolidBrush(Color.Blue))
+                {
+                    foreach (var step in path.Steps)
+                    {
+                        if (step != _maze.StartPosition && !_maze.ExitPositions.Contains(step))
+                        {
+                            g.FillRectangle(pathBrush, step.X * CellSize, step.Y * CellSize, CellSize, CellSize);
+                            g.DrawRectangle(Pens.Gray, step.X * CellSize, step.Y * CellSize, CellSize, CellSize);
+                        }
+                    }
+                }
+            }
+            mazePictureBox.Invalidate();
+        }
+    }
+}
