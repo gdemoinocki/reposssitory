@@ -1,0 +1,161 @@
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include <Adafruit_NeoPixel.h>
+//Wi-Fi
+#define WIFI_SSID "Wokwi-GUEST"
+#define WIFI_PASSWORD ""
+//Telegram bot
+#define BOT_TOKEN "8093625196:AAGCACo3NjPMj-soE5zSWjxBje-cP32zRm0"
+//Светодиоды
+const int ledPins[] = {
+    17, 16, 15,  
+    2,  4,  5,   
+    18, 19       
+};
+const int LED_COUNT = 8;
+// Массив объектов Adafruit_NeoPixel. Каждый объект управляет своим светодиодом
+Adafruit_NeoPixel pixels[LED_COUNT] = {
+    Adafruit_NeoPixel(1, ledPins[0], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[1], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[2], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[3], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[4], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[5], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[6], NEO_GRB + NEO_KHZ800),
+    Adafruit_NeoPixel(1, ledPins[7], NEO_GRB + NEO_KHZ800)
+};
+
+// Цвета
+const uint32_t whiteColor = pixels[0].Color(255, 255, 255);
+const uint32_t redColor = pixels[0].Color(255, 0, 0);
+const uint32_t yellowColor = pixels[0].Color(255, 255, 0);
+const uint32_t greenColor = pixels[0].Color(0, 255, 0);
+const uint32_t blueColor = pixels[0].Color(0, 0, 255);
+const uint32_t colors[] = {whiteColor, redColor, yellowColor, greenColor, blueColor, whiteColor, redColor, yellowColor};
+
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOT_TOKEN, client);
+int botRequestDelay = 500;
+unsigned long lastTimeBotRan;
+bool snakeMode = false;
+
+void setup() {
+    Serial.begin(115200);
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to Wi-Fi ");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+    Serial.print("Connected to Wi-Fi network with IP address: ");
+    Serial.println(WiFi.localIP());
+
+    client.setInsecure();
+    bot.longPoll = true;
+
+    for (int i = 0; i < LED_COUNT; i++) {
+        pixels[i].begin();
+        pixels[i].clear();
+        pixels[i].show();
+    }
+}
+
+void loop() {
+    if (millis() - lastTimeBotRan > botRequestDelay) {
+        int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+        while (numNewMessages) {
+            Serial.println("Got message");
+            handleNewMessages(numNewMessages);
+            numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+        }
+        lastTimeBotRan = millis();
+    }
+    //Змейка
+    if (snakeMode) {
+        snake();
+    }
+}
+
+void handleNewMessages(int numNewMessages) {
+    Serial.println("handleNewMessages");
+    for (int i = 0; i < numNewMessages; i++) {
+        String chat_id = String(bot.messages[i].chat_id);
+        String text = bot.messages[i].text;
+        if (text == "/start") {
+            bot.sendMessage(chat_id, "Привет! Готов к управлению светодиодами.");
+        } 
+        else if (text == "/help") {
+            bot.sendMessage(chat_id, "/start - начать\n/help - все команды\n"
+            "/all_white - все светодиоды белым\n/all_yellow - все светодиоды желтым\n"
+            "/all_green - все светодиоды зеленым\n/all_blue - все светодиоды голубым\n"
+            "/all_red - все светодиоды красным\n/all_off - отключить все светодиоды\n"
+            "/snake - все светодиоды по очереди 'змейкой'\n/stop_snake - отключить змейку\n");
+        } 
+        else if (text == "/all_white") {
+            setAllLedsColor(whiteColor);
+            bot.sendMessage(chat_id, "Светодиоды включены белым.");
+        } 
+        else if (text == "/all_yellow") {
+            setAllLedsColor(yellowColor);
+            bot.sendMessage(chat_id, "Светодиоды включены желтым.");
+        } 
+        else if (text == "/all_green") {
+            setAllLedsColor(greenColor);
+            bot.sendMessage(chat_id, "Светодиоды включены зеленым.");
+        } 
+        else if (text == "/all_blue") {
+            setAllLedsColor(blueColor);
+            bot.sendMessage(chat_id, "Светодиоды включены синим.");
+        } 
+        else if (text == "/all_red") {
+            setAllLedsColor(redColor);
+            bot.sendMessage(chat_id, "Светодиоды включены красным.");
+        } 
+        else if (text == "/all_off") {
+            allLedsOff();
+            bot.sendMessage(chat_id, "Светодиоды выключены.");
+        } 
+        else if (text == "/snake") {
+            snakeMode = true;
+            bot.sendMessage(chat_id, "Светодиоды мигают змейкой.");
+        } 
+        else if (text == "/stop_snake") {
+            snakeMode = false;
+            allLedsOff();
+            bot.sendMessage(chat_id, "Змейка остановлена.");
+        } 
+        else {
+            bot.sendMessage(chat_id, "Неизвестная команда");
+        }
+    }
+}
+
+//Включение всех светодиодов
+void setAllLedsColor(uint32_t color) {
+    for (int i = 0; i < LED_COUNT; i++) {
+        pixels[i].setPixelColor(0, color);
+        pixels[i].show();
+    }
+}
+//Выключение всех светодиодов
+void allLedsOff() {
+    for (int i = 0; i < LED_COUNT; i++) {
+        pixels[i].clear();
+        pixels[i].show();
+    }
+}
+//Змейка
+void snake() {
+    static int index = 0;
+    for (int i = 0; i < LED_COUNT; i++) {
+        pixels[i].clear();
+        pixels[i].show();
+    }
+    pixels[index].setPixelColor(0, colors[index]);
+    pixels[index].show();
+    index = (index + 1) % LED_COUNT;
+    delay(300);
+}
