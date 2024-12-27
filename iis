@@ -1,0 +1,134 @@
+#include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <UniversalTelegramBot.h>
+#include <Adafruit_NeoPixel.h>
+
+
+// ==========  Wi-Fi ==========
+#define WIFI_SSID "Wokwi-GUEST" // Замените на свой SSID
+#define WIFI_PASSWORD ""  // Замените на свой пароль
+
+// ========== Telegram ==========
+#define BOT_TOKEN "8093625196:AAGCACo3NjPMj-soE5zSWjxBje-cP32zRm0" // Замените на токен бота
+
+// ========== NeoPixel =================
+const int ledPins[] = {
+    15, 16, 17, // Верхние светодиоды
+    2,  4,  5,  // Правые светодиоды
+    18, 19, 21, // Нижние светодиоды
+    22, 23, 25  // Левые светодиоды
+};
+const int ledCount = 12; // Общее количество светодиодов
+Adafruit_NeoPixel pixels(ledCount, 15, NEO_GRB + NEO_KHZ800);
+
+// Цвета для каждой секции "экрана"
+const uint32_t whiteColor = pixels.Color(255, 255, 255);
+const uint32_t redColor   = pixels.Color(255, 0, 0);
+const uint32_t yellowColor = pixels.Color(255, 255, 0);
+const uint32_t greenColor = pixels.Color(0, 255, 0);
+const uint32_t blueColor = pixels.Color(0, 0, 255);
+const uint32_t pinkColor = pixels.Color(255, 0, 255);
+
+// Номера светодиодов для каждой секции экрана
+const int topLEDs[] = {0, 1, 2};
+const int rightLEDs[] = {3, 4, 5};
+const int bottomLEDs[] = {6, 7, 8};
+const int leftLEDs[] = {9, 10, 11};
+
+//========== Telegram =================
+WiFiClientSecure client;
+UniversalTelegramBot bot(BOT_TOKEN, client);
+int botRequestDelay = 1000;
+unsigned long lastTimeBotRan;
+
+void setup() {
+    Serial.begin(115200);
+
+    // ==========  Wi-Fi ==========
+    WiFi.mode(WIFI_STA);
+    WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+    Serial.print("Connecting to Wi-Fi ");
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(500);
+        Serial.print(".");
+    }
+    Serial.println("");
+    Serial.print("Connected to Wi-Fi network with IP address: ");
+    Serial.println(WiFi.localIP());
+
+    //========== Telegram ============
+    client.setInsecure();  // Для работы с SSL
+    bot.longPoll = true;  // Отключаем long polling
+
+    //========== NeoPixel ============
+    pixels.begin();
+    pixels.clear();
+    pixels.show();
+}
+
+void loop() {
+    //========== Telegram ===========
+  if (millis() - lastTimeBotRan > botRequestDelay) {
+    int numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+     while (numNewMessages) {
+       Serial.println("Got message");
+       handleNewMessages(numNewMessages);
+      numNewMessages = bot.getUpdates(bot.last_message_received + 1);
+    }
+    lastTimeBotRan = millis();
+  }
+
+}
+void handleNewMessages(int numNewMessages) {
+    Serial.println("handleNewMessages");
+      for (int i = 0; i < numNewMessages; i++) {
+        String chat_id = String(bot.messages[i].chat_id);
+        String text = bot.messages[i].text;
+
+        if (text == "/start") {
+              bot.sendMessage(chat_id, "Привет! Готов к управлению светодиодами.");
+        } else if (text == "/all_on") {
+            allLedsOn();
+             bot.sendMessage(chat_id, "Светодиоды включены.");
+        } else if (text == "/all_off") {
+           allLedsOff();
+             bot.sendMessage(chat_id, "Светодиоды выключены.");
+        } else if (text == "/snake") {
+           snake();
+            bot.sendMessage(chat_id, "Светодиоды мигают змейкой.");
+        } else {
+          bot.sendMessage(chat_id, "Неизвестная команда");
+        }
+      }
+  }
+
+// ========== NeoPixel Functions ==========
+
+void allLedsOn() {
+    // Включаем все светодиоды разными цветами
+    for(int i = 0; i < ledCount; i++) {
+       switch (i % 6) {
+           case 0: pixels.setPixelColor(i, whiteColor); break;
+           case 1: pixels.setPixelColor(i, redColor); break;
+           case 2: pixels.setPixelColor(i, yellowColor); break;
+           case 3: pixels.setPixelColor(i, greenColor); break;
+           case 4: pixels.setPixelColor(i, blueColor); break;
+           case 5: pixels.setPixelColor(i, pinkColor); break;
+       }
+    }
+   pixels.show();
+}
+
+void allLedsOff() {
+    pixels.clear();
+    pixels.show();
+}
+
+void snake() {
+   for (int i=0; i< ledCount; i++){
+         pixels.clear();
+        pixels.setPixelColor(i, pixels.Color(0, 255, 0));
+        pixels.show();
+      delay(50);
+   }
+}
