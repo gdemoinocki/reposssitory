@@ -1,7 +1,21 @@
 1.SELECT * FROM pg_roles WHERE rolcreatedb = true;
 2. SELECT * FROM pg_roles WHERE rolcreaterole = true;
 3. CREATE USER test_user PASSWORD '1234';
-4.
+ALTER ROLE temp_user CREATEDB;
+CREATE USER test_user PASSWORD '1234'; выводит ошибку (так надо)
+4. ALTER ROLE temp_user WITH PASSWORD '0000';
+5. CREATE ROLE only_connect WITH LOGIN PASSWORD '1234';
+6. SELECT * FROM "Покупатель"; выводит ошибку (так надо)
+7. GRANT SELECT ("Наименование", "Цена") ON "Товар" TO only_connect; + 6
+8. GRANT SELECT ON ALL TABLES IN SCHEMA public TO only_connect;
+SELECT * FROM "Товар";
+9. ALTER ROLE only_connect RENAME TO read_and_connect;
+10. выводит ошибку (так надо)
+11. работает
+12. INSERT INTO "Товар" ("Наименование", "Тип", "Размер", "Вес", "Цена", "Количество") VALUES ('Футболка оверсайз', 'Футболки', 'M', '250', '1300', '5'); выводит ошибку (так надо)
+13. GRANT INSERT ON ALL TABLES IN SCHEMA public TO read_and_connect; + 12
+14. UPDATE "Товар" SET "Количество" ='10' WHERE "Код_Товара" = 21; выводит ошибку (так надо)
+15. GRANT UPDATE ON ALL TABLES IN SCHEMA public TO read_and_connect; + 15
 16. DELETE FROM "Товар" WHERE "Код_Товара" = 21; выводит ошибку (так надо)
 17. GRANT DELETE ON ALL TABLES IN SCHEMA public TO read_and_connect; + 16
 
