@@ -1,0 +1,7 @@
+1.SELECT * FROM pg_roles WHERE rolcreatedb = true;
+2. SELECT * FROM pg_roles WHERE rolcreaterole = true;
+3. CREATE USER test_user PASSWORD '1234';
+4.
+16. DELETE FROM "Товар" WHERE "Код_Товара" = 21; выводит ошибку (так надо)
+17. GRANT DELETE ON ALL TABLES IN SCHEMA public TO read_and_connect; + 16
+
