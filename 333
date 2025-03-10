@@ -79,4 +79,183 @@ size_t list_length(item_t *head) {
     return count;
 }
 
-// Функция для проверки наличия значения
+// Функция для проверки наличия значения в списке
+bool list_contains(item_t *head, int value) {
+    // Если список пуст, возвращаем false
+    if (head == NULL) {
+        return false;
+    }
+
+    // Указатель для прохода по списку
+    item_t *pos;
+    // Проходим по всем элементам списка
+    list_for_each_entry(pos, &(head->lists), lists) {
+        // Если значение найдено, возвращаем true
+        if (pos->data == value) {
+            return true;
+        }
+    }
+
+    // Если значение не найдено, возвращаем false
+    return pos->data == value;
+}
+
+// Функция для поиска индекса первого вхождения значения в списке
+size_t list_index(item_t *head, int value) {
+    // Если список пуст, возвращаем максимальное значение size_t (ошибка)
+    if (head == NULL) {
+        return SIZE_MAX;
+    }
+
+    // Индекс текущего элемента
+    size_t index = 0;
+    // Указатель для прохода по списку
+    item_t *pos;
+
+    // Проходим по всем элементам списка
+    list_for_each_entry(pos, &(head->lists), lists) {
+        // Если значение найдено, возвращаем его индекс
+        if (pos->data == value) {
+            return index;
+        }
+        index++;
+    }
+
+    // Если значение не найдено, возвращаем максимальное значение size_t (ошибка)
+    return pos->data == value ? index : SIZE_MAX;
+}
+
+// Функция для удаления последнего элемента списка и возврата его значения
+int *list_pop(item_t *head) {
+    // Если список пуст, возвращаем NULL
+    if (head == NULL) {
+        return NULL;
+    }
+
+    // Указатели на предыдущий и текущий элементы
+    item_t *prev = NULL;
+    item_t *pos = NULL;
+
+    // Проходим по всем элементам списка
+    list_for_each_entry(pos, &(head->lists), lists) {
+        prev = pos;
+    }
+
+    // Выделяем память для хранения значения последнего элемента
+    int *data = malloc(sizeof(int));
+    if (!data) {
+        // Если память не удалось выделить, возвращаем NULL
+        return NULL;
+    }
+
+    // Сохраняем значение последнего элемента
+    *data = pos->data;
+
+    // Если предыдущий элемент существует, удаляем последний элемент
+    if (prev) {
+        list_del(&(prev->lists), &(pos->lists));
+    } else {
+        // Если список состоит из одного элемента, инициализируем его как пустой
+        INIT_LIST_HEAD(&(head->lists));
+    }
+
+    // Освобождаем память, выделенную под последний элемент
+    free(pos);
+    // Возвращаем значение последнего элемента
+    return data;
+}
+
+// Функция для удаления первого вхождения значения из списка
+void list_remove(item_t *head, int value) {
+    // Если список пуст, завершаем функцию
+    if (head == NULL) {
+        return;
+    }
+
+    // Указатели на предыдущий и текущий элементы
+    item_t *prev = NULL;
+    item_t *pos = NULL;
+
+    // Проходим по всем элементам списка
+    list_for_each_entry(pos, &(head->lists), lists) {
+        // Если значение найдено, завершаем цикл
+        if (pos->data == value) break;
+        prev = pos;
+    }
+
+    // Если значение не найдено или список пуст, завершаем функцию
+    if (pos == NULL || pos->data != value) {
+        return;
+    }
+
+    // Если список состоит из одного элемента, освобождаем память и завершаем функцию
+    if (list_is_singular(&(head->lists))) {
+        free(head);
+        return;
+    }
+
+    // Если удаляемый элемент — это головной элемент
+    if (prev == NULL && pos->lists.next) {
+        // Заменяем головной элемент на следующий
+        item_t *next = list_entry(pos->lists.next, item_t, lists);
+        *head = *next;
+        free(next);
+    } else if (list_is_last(&(pos->lists))) {
+        // Если удаляемый элемент — последний, удаляем его
+        list_del(&(prev->lists), &(pos->lists));
+    } else {
+        // Иначе перенаправляем указатель предыдущего элемента на следующий
+        prev->lists.next = pos->lists.next;
+    }
+
+    // Если удаляемый элемент не является головным, освобождаем память
+    if (pos != head) {
+        free(pos);
+    }
+}
+
+// Функция для вставки нового элемента в список на заданную позицию
+void list_insert(item_t *head, size_t index, int value) {
+    // Если список пуст, завершаем функцию
+    if (head == NULL) {
+        return;
+    }
+
+    // Создаем новый элемент с заданным значением
+    item_t *new_item = list_create(value);
+    if (!new_item) {
+        // Если не удалось создать элемент, завершаем функцию
+        return;
+    }
+
+    // Указатель для прохода по списку
+    item_t *pos = head;
+    size_t current_index = 0;
+
+    // Проходим по списку до указанной позиции
+    while (pos->lists.next != NULL && current_index < index) {
+        pos = list_entry(pos->lists.next, item_t, lists);
+        current_index++;
+    }
+
+    // Вставляем новый элемент на указанную позицию
+    list_add(&(new_item->lists), &(pos->lists), pos->lists.next);
+}
+
+// Функция для вывода содержимого списка в файл
+void list_print_int(item_t *head, FILE *f) {
+    // Если список пуст, выводим "NULL" и завершаем функцию
+    if (head == NULL) {
+        fprintf(f, "NULL\n");
+        return;
+    }
+
+    // Указатель для прохода по списку
+    item_t *pos;
+    // Проходим по всем элементам списка и выводим их значения
+    list_for_each_entry(pos, &(head->lists), lists) {
+        fprintf(f, "(%d) -> ", pos->data);
+    }
+    // Выводим "NULL" в конце списка
+    fprintf(f, "(%d) -> NULL\n", pos->data);
+}
