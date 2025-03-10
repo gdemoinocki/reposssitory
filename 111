@@ -1,31 +1,253 @@
+#include "list.h"
+#include <stdio.h>
+#include <stdlib.h>
+
+// Функция для создания нового списка
+list_t *list_create(size_t size)
 {
-    "version": "2.0.0",
-    "tasks": [
-        {
-            "label": "build",
-            "type": "shell",
-            "command": "gcc",
-            "args": [
-                "-g",
-                "-I", "path/to/headers",  // Добавьте путь к директории с заголовочными файлами
-                "${file}",
-                "-o",
-                "${fileDirname}/${fileBasenameNoExtension}"
-            ],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            },
-            "problemMatcher": ["$gcc"],
-            "detail": "Generated task by VS Code"
-        }
-    ]
+    // Выделяем память для структуры списка
+    list_t *list = malloc(sizeof(list_t));
+    if (list == NULL) {
+        return NULL; // Если память не выделилась, возвращаем NULL
+    }
+
+    // Инициализируем список: голова списка пока NULL, размер данных задается параметром
+    list->head = NULL;
+    list->data_size = size;
+    return list;
 }
 
+// Функция для проверки, пуст ли список
+bool list_empty(list_t *list)
+{
+    // Если голова списка NULL, список пуст
+    return list->head == NULL;
+}
 
-Если файл unity_memory.h отсутствует, скачайте его из официального репозитория Unity:
+// Функция для проверки, содержится ли элемент в списке
+bool list_contains(list_t *list, void *item)
+{
+    // Начинаем с головы списка
+    list_node_t *node = list->head;
+    while (node != NULL)
+    {
+        // Сравниваем данные текущего узла с искомым элементом
+        if (!memcmp(node->data, item, list->data_size))
+            return true; // Если нашли, возвращаем true
+        node = node->next; // Переходим к следующему узлу
+    }
+    return false; // Если не нашли, возвращаем false
+}
 
-Репозиторий Unity: https://github.com/ThrowTheSwitch/Unity
+// Функция для получения длины списка
+size_t list_length(list_t* list)
+{
+    size_t length = 0;
+    list_node_t *node = list->head;
 
-Скопируйте файл unity_memory.h в ваш проект
-https://github.com/ThrowTheSwitch/Unity/blob/master/extras/memory/src/unity_memory.h
+    // Проходим по всем узлам списка, считая их количество
+    while (node != NULL)
+    {
+        length++;
+        node = node->next;
+    }
+    return length;
+}
+
+// Функция для поиска индекса элемента в списке
+size_t list_index(list_t *list, void *item)
+{
+    size_t index = 0;
+    list_node_t *node = list->head;
+
+    // Проходим по всем узлам списка
+    while (node != NULL)
+    {
+        // Если нашли элемент, возвращаем его индекс
+        if (!memcmp(node->data, item, list->data_size)) {
+            return index;
+        }
+        index++;
+        node = node->next;
+    }
+    return (size_t)-1; // Если элемент не найден, возвращаем -1 (приведенное к size_t)
+}
+
+// Функция для удаления и возврата последнего элемента списка
+void* list_pop(list_t* list)
+{
+    // Если список пуст, возвращаем NULL
+    if (list->head == NULL)
+    {
+        return NULL;
+    }
+
+    // Если в списке только один элемент
+    if (list->head->next == NULL)
+    {
+        void *data = list->head->data; // Сохраняем данные
+        free(list->head); // Освобождаем память узла
+        list->head = NULL; // Голова списка теперь NULL
+        return data; // Возвращаем данные
+    }
+
+    // Если в списке больше одного элемента, ищем предпоследний узел
+    list_node_t *current = list->head;
+    while (current->next->next != NULL)
+    {
+        current = current->next;
+    }
+
+    // Сохраняем данные последнего узла
+    void *data = current->next->data;
+    free(current->next); // Освобождаем память последнего узла
+    current->next = NULL; // Предпоследний узел теперь указывает на NULL
+    return data; // Возвращаем данные
+}
+
+// Функция для добавления элемента в конец списка
+void list_append(list_t* list, void *item) {
+    // Создаем новый узел
+    list_node_t *new_node = (list_node_t *)malloc(sizeof(list_node_t));
+    if (!new_node) {
+        return; // Если память не выделилась, выходим
+    }
+
+    // Выделяем память для данных узла
+    new_node->data = (void *)malloc(list->data_size);
+    if (!new_node->data) {
+        free(new_node); // Если память не выделилась, освобождаем узел и выходим
+        return;
+    }
+
+    // Копируем данные в новый узел
+    memcpy(new_node->data, item, list->data_size);
+    new_node->next = NULL; // Новый узел будет последним, поэтому next = NULL
+
+    // Если список пуст, новый узел становится головой списка
+    if (list->head == NULL) {
+        list->head = new_node;
+    } else {
+        // Иначе ищем последний узел и добавляем новый узел после него
+        list_node_t *node = list->head;
+        while (node->next != NULL) {
+            node = node->next;
+        }
+        node->next = new_node;
+    }
+}
+
+// Функция для удаления элемента из списка
+void list_remove(list_t *list, void *item)
+{
+    list_node_t *node = list->head;
+    list_node_t *prev = NULL;
+
+    // Проходим по всем узлам списка
+    while (node != NULL)
+    {
+        // Если нашли элемент, который нужно удалить
+        if (!memcmp(node->data, item, list->data_size))
+        {
+            if (prev == NULL) {
+                // Если это голова списка, обновляем голову
+                list->head = node->next;
+            } else {
+                // Иначе обновляем указатель предыдущего узла
+                prev->next = node->next;
+            }
+            // Освобождаем память данных и узла
+            free(node->data);
+            free(node);
+            return;
+        }
+        prev = node;
+        node = node->next;
+    }
+}
+
+// Функция для вставки элемента в список по указанному индексу
+void list_insert(list_t *list, size_t index, void *item)
+{
+    if (list == NULL || item == NULL)
+        return;
+
+    // Создаем новый узел
+    list_node_t *new_node = malloc(sizeof(list_node_t));
+    if (new_node == NULL)
+        return;
+
+    // Выделяем память для данных узла
+    new_node->data = malloc(list->data_size);
+    if (new_node->data == NULL)
+    {
+        free(new_node); // Если память не выделилась, освобождаем узел и выходим
+        return;
+    }
+    // Копируем данные в новый узел
+    memcpy(new_node->data, item, list->data_size);
+
+    // Если индекс 0 или список пуст, вставляем новый узел в начало
+    if (index == 0 || list->head == NULL)
+    {
+        new_node->next = list->head;
+        list->head = new_node;
+    }
+    else
+    {
+        // Иначе ищем узел, после которого нужно вставить новый узел
+        list_node_t *current = list->head;
+        size_t i = 0;
+        while (current->next != NULL && i < index - 1)
+        {
+            current = current->next;
+            i++;
+        }
+
+        // Вставляем новый узел после текущего
+        new_node->next = current->next;
+        current->next = new_node;
+    }
+}
+
+// Функция для уничтожения списка
+void list_destroy(list_t *list)
+{
+    list_node_t *node = list->head;
+    while (node != NULL)
+    {
+        list_node_t *next = node->next; // Сохраняем указатель на следующий узел
+        free(node->data); // Освобождаем память данных
+        free(node); // Освобождаем память узла
+        node = next; // Переходим к следующему узлу
+    }
+    free(list); // Освобождаем память структуры списка
+}
+
+// Функция для печати списка целых чисел в файл
+void list_print_int(list_t *list, FILE *out)
+{
+    // Если список пуст, печатаем "NULL"
+    if (list->head == NULL)
+    {
+        fprintf(out, "NULL");
+        return;
+    }
+
+    // Проходим по всем узлам списка
+    list_node_t *node = list->head;
+    while (node != NULL)
+    {
+        // Печатаем данные текущего узла
+        fprintf(out, "(%d)", *(int *)node->data);
+        if (node->next != NULL)
+        {
+            fprintf(out, " -> "); // Если есть следующий узел, печатаем стрелку
+        }
+        else
+        {
+            fprintf(out, " -> NULL"); // Если это последний узел, печатаем "NULL"
+        }
+        node = node->next;
+    }
+}
