@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "gcc",
+            "args": [
+                "-g",
+                "-I", "path/to/headers",  // Добавьте путь к директории с заголовочными файлами
+                "${file}",
+                "-o",
+                "${fileDirname}/${fileBasenameNoExtension}"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": ["$gcc"],
+            "detail": "Generated task by VS Code"
+        }
+    ]
+}
+
+
+Если файл unity_memory.h отсутствует, скачайте его из официального репозитория Unity:
+
+Репозиторий Unity: https://github.com/ThrowTheSwitch/Unity
+
+Скопируйте файл unity_memory.h в ваш проект
