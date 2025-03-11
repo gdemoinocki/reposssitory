@@ -1,0 +1,134 @@
+#ifndef _LINUX_LIST_H
+#define _LINUX_LIST_H
+
+#include <stddef.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <limits.h>
+
+// Структура, представляющая узел списка
+struct list_head {
+    struct list_head *next;  // Указатель на следующий элемент списка
+};
+
+// Структура, представляющая элемент списка
+typedef struct {
+    int data;                // Данные, хранящиеся в элементе
+    struct list_head lists;  // Узел списка, связывающий элементы
+} item_t;
+
+// Функции для работы со списком
+item_t *list_create(int);          // Создание нового элемента списка
+void list_append(item_t *, int);   // Добавление элемента в конец списка
+void list_destroy(item_t *);       // Уничтожение списка
+size_t list_length(item_t *);      // Получение длины списка
+bool list_contains(item_t *, int); // Проверка наличия значения в списке
+size_t list_index(item_t *, int);  // Поиск индекса значения в списке
+int *list_pop(item_t *);           // Удаление последнего элемента списка
+void list_remove(item_t *, int);   // Удаление элемента по значению
+void list_insert(item_t *, size_t, int); // Вставка элемента на указанную позицию
+void list_print_int(item_t *, FILE *);   // Вывод списка в файл
+
+// Макрос для получения контейнера элемента списка
+#ifndef container_of
+#define container_of(ptr, type, member) \
+    (type *)((char *)(ptr) - (char *)&((type *)0)->member)
+#endif
+
+// Макрос для инициализации головного элемента списка
+#define LIST_HEAD_INIT(name) \
+    {                        \
+        &(name)              \
+    }
+
+// Макрос для объявления и инициализации головного элемента списка
+#define LIST_HEAD(name) \
+    struct list_head name = LIST_HEAD_INIT(name)
+
+// Функция для инициализации головного элемента списка
+static inline void INIT_LIST_HEAD(struct list_head *list) {
+    list->next = NULL;  // Устанавливаем указатель на следующий элемент как NULL
+}
+
+// Внутренняя функция для удаления элемента списка
+static inline void __list_del(struct list_head *prev, struct list_head *next) {
+    prev->next = next;  // Перенаправляем указатель предыдущего элемента на следующий
+}
+
+// Функция для удаления элемента из списка
+#ifndef CONFIG_DEBUG_LIST
+static inline void __list_del_entry(struct list_head *prev, struct list_head *entry) {
+    __list_del(prev, entry->next);  // Удаляем элемент из списка
+}
+
+static inline void list_del(struct list_head *prev, struct list_head *entry) {
+    __list_del(prev, entry->next);  // Удаляем элемент из списка
+    entry->next = LIST_POISON1;     // Помечаем удаленный элемент как "отравленный"
+}
+#else
+extern void __list_del_entry(struct list_head *prev, struct list_head *entry);
+extern void list_del(struct list_head *prev, struct list_head *entry);
+#endif
+
+// Функция для проверки, является ли элемент последним в списке
+static inline int list_is_last(const struct list_head *list) {
+    return list->next == NULL;  // Возвращаем true, если следующий элемент NULL
+}
+
+// Функция для проверки, состоит ли список из одного элемента
+static inline int list_is_singular(const struct list_head *head) {
+    return head->next == NULL;  // Возвращаем true, если следующий элемент NULL
+}
+
+// Макрос для получения структуры, содержащей элемент списка
+#define list_entry(ptr, type, member) \
+    container_of(ptr, type, member)
+
+// Макрос для получения первого элемента списка
+#define list_first_entry(ptr, type, member) \
+    list_entry(ptr, type, member)
+
+// Макрос для получения следующего элемента списка
+#define list_next_entry(pos, member) \
+    list_entry((pos)->member.next, __typeof__(*(pos)), member)
+
+// Макрос для итерации по списку
+#define list_for_each(pos, head) \
+    for (pos = head; pos->next != NULL; pos = pos->next)
+
+// Макрос для итерации по списку с получением структуры элемента
+#define list_for_each_entry(pos, head, member)                   \
+    for (pos = list_first_entry(head, __typeof__(*pos), member); \
+         pos->member.next != NULL;                               \
+         pos = list_next_entry(pos, member))
+
+// Внутренняя функция для добавления нового элемента между двумя существующими
+#ifndef CONFIG_DEBUG_LIST
+static inline void __list_add(struct list_head *new,
+                              struct list_head *prev,
+                              struct list_head *next) {
+    new->next = next;  // Устанавливаем указатель нового элемента на следующий
+    prev->next = new;  // Устанавливаем указатель предыдущего элемента на новый
+}
+#else
+extern void __list_add(struct list_head *new,
+                       struct list_head *prev,
+                       struct list_head *next);
+#endif
+
+// Функция для добавления нового элемента после указанного
+static inline void list_add(struct list_head *new, struct list_head *prev, struct list_head *next) {
+    __list_add(new, prev, next);  // Добавляем новый элемент между prev и next
+}
+
+// Функция для добавления нового элемента в конец списка
+static inline void list_add_tail(struct list_head *new, struct list_head *head) {
+    struct list_head *pos;
+    list_for_each(pos, head);  // Находим последний элемент списка
+    __list_add(new, pos, NULL);  // Добавляем новый элемент в конец списка
+}
+
+#endif
