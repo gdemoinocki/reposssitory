@@ -1,0 +1,43 @@
+1. Ошибка с fscanf:
+В файле test_bst.c замените строки:
+
+c
+Copy
+fscanf(f, "%[^\n]", buf);
+на:
+
+c
+Copy
+if (fscanf(f, "%[^\n]", buf) != 1) {
+    // Обработка ошибки, например:
+    fprintf(stderr, "Error reading from file\n");
+    fclose(f);
+    return;
+}
+2. Ошибка с system:
+В файле bst.c замените строки:
+
+c
+Copy
+system(command);
+на:
+
+c
+Copy
+if (system(command) == -1) {
+    // Обработка ошибки, например:
+    fprintf(stderr, "Error executing command: %s\n", command);
+    free(command);
+    return;
+}
+3. Альтернативное решение: отключение -Werror
+Если вы не хотите исправлять код, вы можете отключить флаг -Werror в Makefile. Найдите строку, где добавляется -Werror, и удалите её. Например, если в Makefile есть строка:
+
+makefile
+Copy
+CFLAGS = -Wall -Werror
+Измените её на:
+
+makefile
+Copy
+CFLAGS = -Wall
