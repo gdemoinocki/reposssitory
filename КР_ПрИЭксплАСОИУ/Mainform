@@ -1,0 +1,297 @@
+using Npgsql;
+using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
+using System.Drawing;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+using System.Windows.Forms;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.ListView;
+
+namespace Accounting_of_components
+{
+    
+    public partial class MainForm : Form
+    {
+        private string connectionString1 = "Server=localhost;Port=5432;Database=Accounting_of_components;User Id=postgres;Password=1234";
+        private string userPosition;
+        private string userEmail;
+        private string firstName;
+        private string lastName;
+        private MenuStrip mainMenu = new MenuStrip();
+        private DataGridView dataGridView2 = new DataGridView();
+        private Font buttonFont = new Font("Microsoft Sans Serif", 12);
+        private Font LabelFont = new Font("Microsoft Sans Serif", 12);
+        public MainForm(string position, string email, string firstName = "", string lastName = "")
+        {
+            userPosition = position;
+            userEmail = email;
+            this.firstName = firstName;
+            this.lastName = lastName;
+            InitializeComponent();
+            InitializeMenu();
+            InitializeMainForm();
+        }
+        private void InitializeMainForm()//Основные элементы формы
+        {
+            this.Text = $"Главная панель ({userPosition})";
+            this.Size = new System.Drawing.Size(800, 600);
+
+            // Отображаем имя и фамилию, если они есть
+            Label nameLabel = new Label();
+            nameLabel.Font = LabelFont;
+            nameLabel.Size = new Size(350, 25);
+            nameLabel.Location = new Point(10, 30);
+            this.Controls.Add(nameLabel);
+
+            nameLabel.Text = $"Добро пожаловать, {firstName} {lastName}!";
+
+            // Здесь можно добавить разную функциональность в зависимости от должности
+            switch (userPosition)
+            {
+                case "Менеджер по закупкам":
+                    AddManagerControls();
+                    break;
+                case "Мастер сборки":
+                    AddMasterControls();
+                    break;
+                case "Кладовщик":
+                    AddStorekeeperControls();
+                    break;
+            }
+        }
+        private void InitializeMenu()//Меню
+        {
+            // Настройка основного меню
+            mainMenu.Dock = DockStyle.Top;
+            this.Controls.Add(mainMenu);
+            this.MainMenuStrip = mainMenu;
+
+            // Общие пункты меню для всех ролей
+            ToolStripMenuItem helpMenu = new ToolStripMenuItem("Помощь");
+            ToolStripMenuItem aboutMenu = new ToolStripMenuItem("Справка");
+
+            // Добавляем меню в зависимости от роли
+            switch (userPosition)
+            {
+                case "Мастер сборки":
+                    CreateMasterMenu();
+                    break;
+                case "Менеджер по закупкам":
+                    CreateManagerMenu();
+                    break;
+                case "Кладовщик":
+                    CreateStorekeeperMenu();
+                    break;
+            }
+
+            // Добавляем общие пункты меню
+            aboutMenu.DropDownItems.Add(new ToolStripMenuItem("О программе", null,
+                (s, e) => MessageBox.Show("Автор программы: Ахметова Эльвира Рустамовна \nДанная программа предназначена для " +
+                "внутреннего учета и использование комплектующих на производстве мебели", "О программе")));
+
+            mainMenu.Items.Add(helpMenu);
+            mainMenu.Items.Add(aboutMenu);
+        }
+
+        private void CreateMasterMenu()
+        {
+            // Меню для мастера сборки
+            ToolStripMenuItem assemblyMenu = new ToolStripMenuItem("Фиксация сборки");
+            ToolStripMenuItem defectMenu = new ToolStripMenuItem("Фиксация брака");
+            ToolStripMenuItem reportMenu = new ToolStripMenuItem("Формирование отчета");
+
+            // Добавляем обработчики
+            assemblyMenu.Click += (s, e) => MessageBox.Show("Фиксация сборки - функционал в разработке");
+            defectMenu.Click += (s, e) => MessageBox.Show("Фиксация брака - функционал в разработке");
+            reportMenu.Click += (s, e) => MessageBox.Show("Формирование отчета - функционал в разработке");
+
+            // Добавляем в главное меню
+            mainMenu.Items.Add(assemblyMenu);
+            mainMenu.Items.Add(defectMenu);
+            mainMenu.Items.Add(reportMenu);
+        }
+
+        private void CreateManagerMenu()
+        {
+            // Меню для менеджера по закупкам
+            ToolStripMenuItem purchaseMenu = new ToolStripMenuItem("Планирование закупки");
+            ToolStripMenuItem productionMenu = new ToolStripMenuItem("Планирование производства");
+            ToolStripMenuItem reportMenu = new ToolStripMenuItem("Формирование отчета");
+
+            // Добавляем обработчики
+            purchaseMenu.Click += (s, e) => MessageBox.Show("Планирование закупки - функционал в разработке");
+            productionMenu.Click += (s, e) => MessageBox.Show("Планирование производства - функционал в разработке");
+            reportMenu.Click += (s, e) => MessageBox.Show("Формирование отчета - функционал в разработке");
+
+            // Добавляем в главное меню
+            mainMenu.Items.Add(purchaseMenu);
+            mainMenu.Items.Add(productionMenu);
+            mainMenu.Items.Add(reportMenu);
+        }
+
+        private void CreateStorekeeperMenu()
+        {
+            // Меню для кладовщика
+            ToolStripMenuItem warehouseMenu = new ToolStripMenuItem("Управление складом");
+            ToolStripMenuItem writeOffMenu = new ToolStripMenuItem("Списание комплектующей");
+            ToolStripMenuItem reportMenu = new ToolStripMenuItem("Формирование отчета");
+
+            // Добавляем обработчики
+            warehouseMenu.Click += (s, e) => MessageBox.Show("Управление складом - функционал в разработке");
+            writeOffMenu.Click += (s, e) => MessageBox.Show("Списание комплектующей - функционал в разработке");
+            reportMenu.Click += (s, e) => MessageBox.Show("Формирование отчета - функционал в разработке");
+
+            // Добавляем в главное меню
+            mainMenu.Items.Add(warehouseMenu);
+            mainMenu.Items.Add(writeOffMenu);
+            mainMenu.Items.Add(reportMenu);
+        }
+
+
+        private void AddManagerControls()
+        {
+            // Контролы для менеджера
+            Button managerButton = new Button();
+            managerButton.Text = "Управление закупками";
+            managerButton.Location = new System.Drawing.Point(20, 60);
+            managerButton.Click += (s, e) => MessageBox.Show("Функции менеджера");
+            this.Controls.Add(managerButton);
+        }
+
+        private void AddMasterControls()
+        {
+            LoadProductionPlan(dataGridView1);
+
+            // Контролы для мастера
+            Button masterButton1 = new Button();
+            masterButton1.Text = "Составить отчет о производственном процессе";
+            masterButton1.Font = buttonFont;
+            masterButton1.Size = new Size(250, 80);
+            masterButton1.Location = new Point(500, 50);
+            this.Controls.Add(masterButton1);
+
+            Button masterButton2 = new Button();
+            masterButton2.Text = "Зафиксировать испорченную комплектующую";
+            masterButton2.Font = buttonFont;
+            masterButton2.Size = new Size(250, 80);
+            masterButton2.Location = new Point(500, 170);
+            this.Controls.Add(masterButton2);
+
+        }
+
+        private void AddStorekeeperControls()
+        {
+            // Контролы для кладовщика
+            Button storekeeperButton = new Button();
+            storekeeperButton.Text = "Управление складом";
+            storekeeperButton.Location = new System.Drawing.Point(20, 60);
+            storekeeperButton.Click += (s, e) => MessageBox.Show("Функции кладовщика");
+            this.Controls.Add(storekeeperButton);
+        }
+
+        private void exitButton_Click(object sender, EventArgs e)
+        {
+            DialogResult result = MessageBox.Show(
+                "Вы действительно хотите выйти из программы?",
+                "Подтверждение выхода",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result == DialogResult.Yes)
+            {
+                Application.Exit();
+            }
+        }
+        private void LoadProductionPlan(DataGridView dataGridView)
+        {
+            try
+            {
+                using (NpgsqlConnection connection = new NpgsqlConnection(connectionString1))
+                {
+                    connection.Open();
+
+                    // 1. Получаем ID мастера напрямую по email (без промежуточного запроса)
+                    string masterIdQuery = @"SELECT ""ID_Мастера"" FROM ""Мастер_сборки"" WHERE email = @email";
+                    int masterId;
+
+                    using (NpgsqlCommand masterIdCmd = new NpgsqlCommand(masterIdQuery, connection))
+                    {
+                        // Правильно создаем параметр
+                        masterIdCmd.Parameters.Add(new NpgsqlParameter("@email", NpgsqlTypes.NpgsqlDbType.Varchar)
+                        {
+                            Value = userEmail ?? (object)DBNull.Value // Защита от null
+                        });
+
+                        var result = masterIdCmd.ExecuteScalar();
+
+                        if (result == null || result == DBNull.Value)
+                        {
+                            MessageBox.Show($"Мастер с email {userEmail} не найден");
+                            return;
+                        }
+
+                        masterId = Convert.ToInt32(result);
+                    }
+
+                    // 2. Получаем планы производства для мастера
+                    string query = @"
+                        SELECT DISTINCT
+                            p.""Дата_начала"",
+                            p.""Дата_окончания"",
+                            m.""Наименование"" AS ""Мебель"",
+                            p.""Количество_изделий"",
+                            p.""Статус""
+                        FROM 
+                            ""План_производства"" p
+                        JOIN 
+                            ""Мебель"" m ON p.""ID_Мебели"" = m.""ID_Мебели""
+                        JOIN
+                            ""Сборка"" s ON p.""ID_Плана"" = s.""ID_Плана""
+                        JOIN
+                            ""Участок_сборки"" u ON s.""ID_Участка"" = u.""ID_Участка""
+                        WHERE
+                            u.""ID_Мастера"" = @masterId
+                        ORDER BY
+                            p.""Дата_начала"" DESC";
+
+                    using (NpgsqlDataAdapter adapter = new NpgsqlDataAdapter(query, connection))
+                    {
+                        // Правильно добавляем параметр
+                        adapter.SelectCommand.Parameters.Add(new NpgsqlParameter("@masterId", NpgsqlTypes.NpgsqlDbType.Integer)
+                        {
+                            Value = masterId
+                        });
+
+                        DataTable dt = new DataTable();
+                        adapter.Fill(dt);
+
+                        // Настройка DataGridView
+                        dataGridView.DataSource = dt;
+                        dataGridView.AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill;
+
+                        // Переименование столбцов (с проверкой на существование)
+                        if (dt.Columns.Contains("Дата_начала"))
+                            dataGridView.Columns["Дата_начала"].HeaderText = "Дата начала";
+                        if (dt.Columns.Contains("Дата_окончания"))
+                            dataGridView.Columns["Дата_окончания"].HeaderText = "Дата окончания";
+                        if (dt.Columns.Contains("Мебель"))
+                            dataGridView.Columns["Мебель"].HeaderText = "Изделие";
+                        if (dt.Columns.Contains("Количество_изделий"))
+                            dataGridView.Columns["Количество_изделий"].HeaderText = "Количество";
+                        if (dt.Columns.Contains("Статус"))
+                            dataGridView.Columns["Статус"].HeaderText = "Статус";
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при загрузке данных: {ex.Message}", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+    }
+}
