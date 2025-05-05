@@ -1,0 +1,62 @@
+from copy import copy
+from double_linked_list import DoublyLinkedList, StudentNode
+
+#Вычисляем средний балл студента
+def calculate_average_grade(grades):
+    return sum(grades) / len(grades)
+
+#Сортируем список студентов по среднему баллу с использованием сортировки выбором.
+def selection_sort(students):
+    if not students or len(students) <= 1: #Если список пустой или содержит только один элемент, он уже отсортирован
+        return students
+
+    current = students.head #Начинаем с головы списка
+    while current.next:  # Проходим по списку до предпоследнего элемента
+        min_node = current  # Считаем, что текущий элемент - минимальный
+
+        inner_current = current.next  # Начинаем проверку со следующего элемента
+        while inner_current:  # Проходим до конца списка
+            # Если найден элемент с меньшим средним баллом
+            if calculate_average_grade(inner_current.grades) < calculate_average_grade(min_node.grades):
+                min_node = inner_current  # Обновляем минимальный элемент
+            inner_current = inner_current.next  # Переходим к следующему элементу
+
+        if min_node != current:  # Если был найден элемент с меньшим средним баллом
+            # Меняем местами данные текущего элемента и минимального
+            current.name, min_node.name = min_node.name, current.name  # Обмен имени
+            current.birth_year, min_node.birth_year = min_node.birth_year, current.birth_year  # Обмен года рождения
+            current.enrollment_year, min_node.enrollment_year = min_node.enrollment_year, current.enrollment_year  # Обмен года поступления
+            current.grades, min_node.grades = min_node.grades, current.grades  # Обмен списка оценок
+
+        current = current.next  # Переходим к следующему элементу внешнего цикла
+    return students
+
+#Выводим список студентов на экран.
+def display_students(students, list_name):
+    print(f"\nСписок студентов {list_name}:")
+    for student in students:
+        print(student)
+
+
+if __name__ == "__main__":
+    students = DoublyLinkedList()
+    students.append(StudentNode("Алёна", 2006, 2024, [4, 3, 3, 4, 5]))
+    students.append(StudentNode("Ирина", 2001, 2020, [5, 3, 3, 4, 5]))
+    students.append(StudentNode("Владислав", 2003, 2023, [2, 4, 3, 3, 3]))
+    students.append(StudentNode("Ренат", 2002, 2020, [4, 4, 4, 4, 5]))
+    students.append(StudentNode("Александр", 2003, 2021, [3, 3, 3, 2, 4]))
+    students.append(StudentNode("Мария", 2004, 2022, [5, 5, 5, 5, 5]))
+
+    students_filtered = DoublyLinkedList()
+    # Разделяем студентов на два списка: четный и нечетный год поступления
+    for student in students:
+        if student.enrollment_year % 2:
+            students_filtered.append(copy(student))
+            students.remove(student)
+
+    # Сортировка студентов по среднему баллу (сортировка выбором)
+    students = selection_sort(students)
+    students_filtered = selection_sort(students_filtered)
+
+    display_students(students, "с четным годом поступления")
+    display_students(students_filtered, "с нечетным годом поступления")
